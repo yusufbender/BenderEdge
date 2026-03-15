@@ -5,6 +5,13 @@
 
 ![BenderEdge Screenshot](docs/screenshot.png)
 
+[![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square&logo=python)](https://python.org)
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?style=flat-square&logo=next.js)](https://nextjs.org)
+[![XGBoost](https://img.shields.io/badge/XGBoost-ML-orange?style=flat-square)](https://xgboost.ai)
+[![LangChain](https://img.shields.io/badge/LangChain-Agents-green?style=flat-square)](https://langchain.com)
+[![Ollama](https://img.shields.io/badge/Ollama-Local_LLM-purple?style=flat-square)](https://ollama.com)
+[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
+
 ---
 
 ## ⚠️ Disclaimer
@@ -15,6 +22,7 @@
 - Results may be inaccurate, outdated, or misleading
 - Never make investment decisions based solely on this tool
 - Past backtest performance does not guarantee future results
+- The creator assumes no responsibility for any financial losses
 
 **Use at your own risk.**
 
@@ -22,123 +30,159 @@
 
 ## Overview
 
-**BenderEdge** is a multi-agent AI system that analyzes stocks using specialized agents working in parallel.
+**BenderEdge** is a multi-agent AI system that analyzes stocks using 5 specialized agents working in parallel. Each agent produces a **BUY / SELL / HOLD vote with confidence score**. A portfolio agent aggregates all signals using **weighted voting** to produce the final verdict.
 
-Each agent produces a **BUY / SELL / HOLD vote with confidence**, and a **portfolio agent aggregates signals using weighted voting** to produce the final decision.
+### Why BenderEdge?
 
-The system demonstrates:
+Most stock analysis tools give you a single signal from a single model. BenderEdge is different:
 
-- Multi-agent orchestration with **LangChain**
-- Machine learning signals using **XGBoost**
-- **Real-time agent streaming** with SSE
-- A full-stack **AI + ML financial analysis application**
+- **5 agents with different methodologies** vote independently
+- **Disagreement is a signal** — low agreement = lower confidence
+- **ML model trains on-the-fly** for each ticker, no stale pre-trained weights
+- **Fully local** — Ollama LLM, no API costs, no data sent to third parties
+- **Real-time streaming** — watch each agent work as it happens
 
 ---
 
 ## Architecture
 ```
 User Input (Ticker)
-│
-▼
+         │
+         ▼
 FastAPI Orchestrator (LangChain)
-│
-├── Researcher Agent  →  News analysis
-├── Quant Agent       →  Technical indicators
-├── Sentiment Agent   →  Market sentiment
-├── ML Agent          →  XGBoost predictions
-│
-▼
+         │
+         ├─── Researcher Agent  ──► NewsAPI + LLM analysis
+         ├─── Quant Agent       ──► RSI, MACD, BB, SMA, Volume
+         ├─── Sentiment Agent   ──► Headline tone scoring
+         ├─── BenderQuant Agent ──► XGBoost on-the-fly training
+         │
+         ▼
 Portfolio Agent (Weighted Voting)
-│
-▼
-BUY / SELL / HOLD Verdict
-│
-▼
-SSE Streaming → Next.js Dashboard
+         │
+         ▼
+  BUY / SELL / HOLD + Confidence Score
+         │
+         ▼
+SSE Streaming ──► Next.js Dashboard
 ```
 
 ---
 
 ## Agents
 
-### Researcher Agent
-Analyzes financial news using NewsAPI. Extracts risk signals, catalysts, and spotlight headlines. Produces BUY / SELL / HOLD vote with confidence.
+### 🔍 Researcher Agent
+Fetches live financial news via NewsAPI. Identifies the most market-moving headlines, extracts risk signals and catalysts, and votes with confidence.
 
-### Quant Agent
-Computes technical indicators: RSI, MACD, Bollinger Bands, SMA20/50, support/resistance, volume spikes. Generates technical market signal.
+**Output:** Summary · Spotlight headline · Risk · Catalyst · Vote
 
-### Sentiment Agent
-Analyzes headline tone and produces a sentiment score (-10 → +10) with Bullish / Neutral / Bearish label.
+### 📊 Quant Agent
+Computes 11 technical indicators from price history using yfinance.
 
-### BenderQuant ML Agent
-Machine learning model powered by **XGBoost**, trained on-the-fly per ticker using 2 years of historical data.
+| Indicator | Signal |
+|-----------|--------|
+| RSI (14) | Oversold / Overbought |
+| MACD | Bullish / Bearish crossover |
+| Bollinger Bands | Price position relative to bands |
+| SMA 20 / 50 | Trend direction |
+| Support / Resistance | Key price levels |
+| Volume spike | Unusual activity |
 
-Produces:
-- 5-day short-term signal + 30-day long-term signal
-- Cross-validation score + test accuracy
-- Backtest metrics (Sharpe, Max Drawdown, CAGR)
-- Equity curve + recent trades
-- Fundamental data (P/E, EPS, Market Cap, Beta, 52-week range)
+### 💬 Sentiment Agent
+Analyzes news headline tone and produces a numerical sentiment score with directional label.
 
-### Portfolio Agent
-Combines all agent votes using weighted aggregation.
+**Output:** Score (-10 → +10) · Bullish / Neutral / Bearish · Vote
 
-| Agent | Weight |
-|-------|--------|
-| Quant | 35% |
-| BenderQuant ML | 30% |
-| Sentiment | 20% |
-| Researcher | 15% |
+### 🤖 BenderQuant ML Agent
+The most sophisticated agent. Powered by **XGBoost**, trained on-the-fly using 2 years of OHLCV data for the requested ticker.
 
-Confidence score = **agent agreement × signal strength**
+**Signals:**
+- 5-day short-term prediction
+- 30-day long-term prediction
+
+**Model quality:**
+- 5-fold cross-validation score
+- Test set accuracy
+
+**Backtest (2 years):**
+- Total return
+- Sharpe ratio
+- Max drawdown
+- CAGR
+- Equity curve
+- Recent trade log
+
+**Fundamentals:**
+- P/E ratio · EPS · Market Cap
+- Beta · 52-week high/low
+- Sector · AI company detection
+
+> Powered by [BenderQuant](https://github.com/yusufbender/benderquant) — a standalone XGBoost financial classification project.
+
+### 🏦 Portfolio Agent
+Aggregates all agent votes using a weighted system designed to prioritize quantitative signals.
+
+| Agent | Weight | Rationale |
+|-------|--------|-----------|
+| Quant | 35% | Objective, rule-based |
+| BenderQuant ML | 30% | Data-driven, ticker-specific |
+| Sentiment | 20% | News-driven momentum |
+| Researcher | 15% | Contextual intelligence |
+```
+confidence_score = agent_agreement × signal_strength
+```
 
 ---
 
-## Example Analysis
+## Example Output
 
 **Ticker: TSLA**
 ```
-Portfolio Verdict: SELL
-Confidence:        Medium
-Weighted Score:    -0.33
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ PORTFOLIO VERDICT:  SELL
+ Confidence:         High (0.79)
+ Weighted Score:     -0.862
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Agent Votes:
-  Researcher  →  HOLD
-  Quant       →  SELL  (bearish MACD, price below SMA)
-  Sentiment   →  SELL  (UK sales drop -45%)
-  ML          →  SELL  (0/5 BUY signals, confidence 97%)
+ Agent Votes:
+  Researcher  →  HOLD  (75%)   mixed signals
+  Quant       →  SELL  (75%)   bearish MACD, below SMA
+  Sentiment   →  SELL  (75%)   UK sales drop -45%
+  ML          →  SELL  (97%)   0/5 BUY signals last 5 days
 
-Agreement: 75%
+ Agreement: 75%  |  BUY: 0  SELL: 3  HOLD: 1
+
+ BenderQuant Backtest (2Y):
+  Return: +340%  |  Sharpe: 2.1  |  Max DD: -9.2%
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
 ---
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Frontend | Next.js 14, Tailwind CSS, Recharts |
-| Backend | FastAPI, Python |
-| ML | XGBoost, scikit-learn, pandas |
-| LLM | Ollama (Qwen2.5:7b) + LangChain |
-| Data | yfinance, NewsAPI |
-| Streaming | Server-Sent Events (SSE) |
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| Frontend | Next.js 14 + Tailwind + Recharts | Dashboard UI |
+| Backend | FastAPI + Python | API + orchestration |
+| ML | XGBoost + scikit-learn + pandas | On-the-fly model training |
+| LLM | Ollama (Qwen2.5:7b) + LangChain | Agent reasoning |
+| Data | yfinance + NewsAPI | Price + news data |
+| Streaming | Server-Sent Events (SSE) | Real-time agent output |
 
 ---
 
 ## Features
 
-- ✅ Real-time agent streaming — each agent appears as it completes
-- ✅ Tab-based dashboard (Overview / Quant / ML Model / Research)
-- ✅ Weighted multi-agent voting with confidence scoring
-- ✅ On-the-fly XGBoost training per ticker
-- ✅ 5-day and 30-day ML signals
-- ✅ Backtesting (Sharpe, Max Drawdown, CAGR)
-- ✅ Equity curve visualization + recent trades
-- ✅ Fundamental stock data (P/E, EPS, Market Cap, Beta)
-- ✅ Global market support (NYSE, NASDAQ, BIST, LSE, Frankfurt, Tokyo)
-- ✅ Spotlight headline analysis with Risk/Catalyst extraction
-- ✅ Fully local LLM — no API costs
+- ✅ **Real-time agent streaming** — each agent result appears as it completes
+- ✅ **Tab-based dashboard** — Overview / Quant / ML Model / Research
+- ✅ **Weighted multi-agent voting** with quantified confidence scoring
+- ✅ **On-the-fly XGBoost training** — no stale pre-trained weights
+- ✅ **Dual ML signals** — 5-day and 30-day horizons
+- ✅ **Full backtesting** — Sharpe, Max Drawdown, CAGR, equity curve
+- ✅ **Fundamental analysis** — P/E, EPS, Market Cap, Beta
+- ✅ **Global market support** — NYSE, NASDAQ, BIST, LSE, Frankfurt, Tokyo
+- ✅ **Spotlight headlines** with Risk / Catalyst extraction
+- ✅ **Fully local LLM** — no API costs, no data leakage
 
 ---
 
@@ -148,20 +192,22 @@ Agreement: 75%
 - Python 3.10+
 - Node.js 18+
 - [Ollama](https://ollama.com) with `qwen2.5:7b`
+- [NewsAPI](https://newsapi.org) free key
 ```bash
 # 1. Clone
 git clone https://github.com/yusufbender/BenderEdge.git
 cd BenderEdge
 
-# 2. Backend
+# 2. Backend setup
 python -m venv venv
-venv\Scripts\activate
+venv\Scripts\activate          # Windows
+source venv/bin/activate       # macOS/Linux
 pip install -r requirements.txt
 
 # 3. Environment
 echo "NEWS_API_KEY=your_key_here" > backend/.env
 
-# 4. Pull LLM
+# 4. Pull local LLM
 ollama pull qwen2.5:7b
 
 # 5. Start backend
@@ -180,31 +226,86 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ## Supported Markets
 
-| Market | Example |
-|--------|---------|
-| NYSE / NASDAQ | `AAPL`, `TSLA`, `NVDA` |
-| Borsa Istanbul | `THYAO.IS`, `GARAN.IS` |
-| London | `HSBA.L` |
-| Frankfurt | `SAP.DE` |
-| Tokyo | `7203.T` |
-| Hong Kong | `0700.HK` |
+| Market | Suffix | Example |
+|--------|--------|---------|
+| NYSE / NASDAQ | — | `AAPL` `TSLA` `NVDA` |
+| Borsa Istanbul | `.IS` | `THYAO.IS` `GARAN.IS` |
+| London | `.L` | `HSBA.L` |
+| Frankfurt | `.DE` | `SAP.DE` |
+| Tokyo | `.T` | `7203.T` |
+| Hong Kong | `.HK` | `0700.HK` |
+
+---
+
+## Roadmap
+
+### ✅ v1.0 — Core System
+- [x] 5-agent voting architecture
+- [x] FastAPI + SSE streaming backend
+- [x] Next.js tab-based dashboard
+- [x] BenderQuant XGBoost integration
+- [x] On-the-fly model training
+- [x] Backtest + equity curve
+- [x] Fundamental data
+- [x] Global market support
+
+### 🔄 v1.1 — Signal Quality (In Progress)
+- [ ] SHAP feature importance visualization
+- [ ] Agent confidence calibration
+- [ ] Multi-ticker comparison view
+- [ ] Watchlist / portfolio tracking
+
+### 🔮 v1.2 — Intelligence Layer
+- [ ] Insider trading signals (SEC EDGAR)
+- [ ] Macro agent (FRED API — rates, inflation, GDP)
+- [ ] Earnings agent (EPS beat/miss history)
+- [ ] Options flow agent (put/call ratio, IV)
+
+### 🚀 v2.0 — Production
+- [ ] User authentication
+- [ ] Alert system (price + signal triggers)
+- [ ] Deploy on Railway + Vercel
+- [ ] Docker compose setup
+- [ ] PostgreSQL for analysis history
+
+---
+
+## Project Structure
+```
+BenderEdge/
+├── backend/
+│   ├── agents/
+│   │   ├── researcher.py     # News + LLM analysis
+│   │   ├── quant.py          # Technical indicators
+│   │   ├── sentiment.py      # Headline tone scoring
+│   │   ├── ml_agent.py       # XGBoost on-the-fly
+│   │   └── portfolio.py      # Weighted voting
+│   ├── routers/
+│   │   └── analysis.py       # SSE + REST endpoints
+│   ├── models/               # Saved model artifacts
+│   └── main.py               # FastAPI app
+└── frontend/
+    └── app/
+        └── page.tsx          # Next.js dashboard
+```
 
 ---
 
 ## Related Projects
 
-**[BenderQuant](https://github.com/yusufbender/benderquant)** — The XGBoost financial classification model powering the ML agent. Includes feature engineering, SMOTE balancing, and hyperparameter tuning.
+**[BenderQuant](https://github.com/yusufbender/benderquant)**  
+XGBoost financial classification model. Trained on multi-ticker datasets with feature engineering, SMOTE oversampling, and GridSearch hyperparameter tuning. Powers the ML agent in BenderEdge.
 
 ---
 
 ## Author
 
 **Yusuf** — AI / ML Engineer  
-Building production-grade AI systems, LLM architectures and intelligent financial tools.
+Building production-grade AI systems, LLM architectures, and intelligent financial tools.
 
 ---
 
-⭐ If you find this project interesting, consider giving it a star.
+⭐ *If you find this project useful or interesting, consider giving it a star.*
 
 ---
 
