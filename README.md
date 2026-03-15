@@ -1,6 +1,7 @@
-# BenderEdge 🧠
+# 🧠 BenderEdge
 
-> Multi-agent AI stock research platform powered by XGBoost, LLM agents, and real-time streaming.
+> Multi-agent AI platform for stock research  
+> Combining **quant analysis, ML signals, news intelligence and sentiment** into a unified trading verdict.
 
 ![BenderEdge Screenshot](docs/screenshot.png)
 
@@ -14,64 +15,73 @@
 - Results may be inaccurate, outdated, or misleading
 - Never make investment decisions based solely on this tool
 - Past backtest performance does not guarantee future results
-- The creator assumes no responsibility for any financial losses
 
 **Use at your own risk.**
 
 ---
 
-## What is BenderEdge?
+## Overview
 
-BenderEdge is a multi-agent AI system that analyzes stocks using 5 specialized agents. Each agent votes on a BUY/SELL/HOLD decision with a confidence score. A weighted voting system combines all signals into a final verdict.
+**BenderEdge** is a multi-agent AI system that analyzes stocks using specialized agents working in parallel.
 
-Built to demonstrate:
-- Multi-agent orchestration with LangChain
-- XGBoost ML model integration (BenderQuant)
-- Real-time SSE streaming architecture
-- Full-stack AI application development
+Each agent produces a **BUY / SELL / HOLD vote with confidence**, and a **portfolio agent aggregates signals using weighted voting** to produce the final decision.
+
+The system demonstrates:
+
+- Multi-agent orchestration with **LangChain**
+- Machine learning signals using **XGBoost**
+- **Real-time agent streaming** with SSE
+- A full-stack **AI + ML financial analysis application**
 
 ---
 
 ## Architecture
 ```
-User Input (ticker)
-        ↓
+User Input (Ticker)
+│
+▼
 FastAPI Orchestrator (LangChain)
-        ↓
-┌──────────────────────────────────────┐
-│  Researcher   │ Web + NewsAPI        │
-│  Quant        │ RSI, MACD, BB, SMA   │
-│  Sentiment    │ News tone analysis   │
-│  BenderQuant  │ XGBoost ML signal    │
-│  Portfolio    │ Weighted verdict     │
-└──────────────────────────────────────┘
-        ↓
-SSE Streaming → Next.js UI
+│
+├── Researcher Agent  →  News analysis
+├── Quant Agent       →  Technical indicators
+├── Sentiment Agent   →  Market sentiment
+├── ML Agent          →  XGBoost predictions
+│
+▼
+Portfolio Agent (Weighted Voting)
+│
+▼
+BUY / SELL / HOLD Verdict
+│
+▼
+SSE Streaming → Next.js Dashboard
 ```
 
 ---
 
 ## Agents
 
-**Researcher Agent**
-Fetches live news via NewsAPI, identifies spotlight headlines, extracts risk and catalyst signals, votes BUY/SELL/HOLD with confidence score.
+### Researcher Agent
+Analyzes financial news using NewsAPI. Extracts risk signals, catalysts, and spotlight headlines. Produces BUY / SELL / HOLD vote with confidence.
 
-**Quant Agent**
-Computes RSI, MACD, Bollinger Bands, SMA20/50, support/resistance, volume spike. Generates technical vote.
+### Quant Agent
+Computes technical indicators: RSI, MACD, Bollinger Bands, SMA20/50, support/resistance, volume spikes. Generates technical market signal.
 
-**Sentiment Agent**
-Analyzes news headline tone, produces sentiment score (-10 to +10), labels Bullish/Neutral/Bearish.
+### Sentiment Agent
+Analyzes headline tone and produces a sentiment score (-10 → +10) with Bullish / Neutral / Bearish label.
 
-**BenderQuant ML Agent**
-Trains an XGBoost model on-the-fly using 2 years of price data. Produces:
+### BenderQuant ML Agent
+Machine learning model powered by **XGBoost**, trained on-the-fly per ticker using 2 years of historical data.
+
+Produces:
 - 5-day short-term signal + 30-day long-term signal
-- CV score (5-fold cross-validation) + test accuracy
-- Backtest results (Return, Sharpe, Max Drawdown, CAGR)
-- Equity curve visualization
+- Cross-validation score + test accuracy
+- Backtest metrics (Sharpe, Max Drawdown, CAGR)
+- Equity curve + recent trades
 - Fundamental data (P/E, EPS, Market Cap, Beta, 52-week range)
 
-**Portfolio Agent**
-Combines all agent votes using weighted voting:
+### Portfolio Agent
+Combines all agent votes using weighted aggregation.
 
 | Agent | Weight |
 |-------|--------|
@@ -80,7 +90,26 @@ Combines all agent votes using weighted voting:
 | Sentiment | 20% |
 | Researcher | 15% |
 
-Confidence score = agent agreement × signal strength.
+Confidence score = **agent agreement × signal strength**
+
+---
+
+## Example Analysis
+
+**Ticker: TSLA**
+```
+Portfolio Verdict: SELL
+Confidence:        Medium
+Weighted Score:    -0.33
+
+Agent Votes:
+  Researcher  →  HOLD
+  Quant       →  SELL  (bearish MACD, price below SMA)
+  Sentiment   →  SELL  (UK sales drop -45%)
+  ML          →  SELL  (0/5 BUY signals, confidence 97%)
+
+Agreement: 75%
+```
 
 ---
 
@@ -89,7 +118,7 @@ Confidence score = agent agreement × signal strength.
 | Layer | Technology |
 |-------|-----------|
 | Frontend | Next.js 14, Tailwind CSS, Recharts |
-| Backend | FastAPI, Python 3.13 |
+| Backend | FastAPI, Python |
 | ML | XGBoost, scikit-learn, pandas |
 | LLM | Ollama (Qwen2.5:7b) + LangChain |
 | Data | yfinance, NewsAPI |
@@ -99,23 +128,23 @@ Confidence score = agent agreement × signal strength.
 
 ## Features
 
-- ✅ Real-time agent streaming — each agent result appears as it completes
-- ✅ Tab-based dashboard layout (Overview / Quant / ML Model / Research)
+- ✅ Real-time agent streaming — each agent appears as it completes
+- ✅ Tab-based dashboard (Overview / Quant / ML Model / Research)
 - ✅ Weighted multi-agent voting with confidence scoring
-- ✅ On-the-fly XGBoost training per ticker (no pre-trained model required)
+- ✅ On-the-fly XGBoost training per ticker
 - ✅ 5-day and 30-day ML signals
-- ✅ Backtest with Sharpe ratio, Max Drawdown, CAGR
+- ✅ Backtesting (Sharpe, Max Drawdown, CAGR)
 - ✅ Equity curve visualization + recent trades
-- ✅ Fundamental data (P/E, EPS, Market Cap, Beta, 52-week range)
+- ✅ Fundamental stock data (P/E, EPS, Market Cap, Beta)
 - ✅ Global market support (NYSE, NASDAQ, BIST, LSE, Frankfurt, Tokyo)
 - ✅ Spotlight headline analysis with Risk/Catalyst extraction
 - ✅ Fully local LLM — no API costs
 
 ---
 
-## Local Setup
+## Run Locally
 
-**Prerequisites**
+### Prerequisites
 - Python 3.10+
 - Node.js 18+
 - [Ollama](https://ollama.com) with `qwen2.5:7b`
@@ -126,7 +155,7 @@ cd BenderEdge
 
 # 2. Backend
 python -m venv venv
-venv\Scripts\activate      # Windows
+venv\Scripts\activate
 pip install -r requirements.txt
 
 # 3. Environment
@@ -135,11 +164,11 @@ echo "NEWS_API_KEY=your_key_here" > backend/.env
 # 4. Pull LLM
 ollama pull qwen2.5:7b
 
-# 5. Run backend
+# 5. Start backend
 cd backend
 uvicorn main:app --reload
 
-# 6. Run frontend (new terminal)
+# 6. Start frontend (new terminal)
 cd ../frontend
 npm install
 npm run dev
@@ -149,9 +178,7 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## Usage
-
-Enter any ticker symbol:
+## Supported Markets
 
 | Market | Example |
 |--------|---------|
@@ -166,14 +193,18 @@ Enter any ticker symbol:
 
 ## Related Projects
 
-**[BenderQuant](https://github.com/yusufbender/benderquant)** — The XGBoost financial classification model powering the ML agent in this project. Trained on multi-ticker datasets with feature engineering, SMOTE oversampling, and hyperparameter tuning.
+**[BenderQuant](https://github.com/yusufbender/benderquant)** — The XGBoost financial classification model powering the ML agent. Includes feature engineering, SMOTE balancing, and hyperparameter tuning.
 
 ---
 
 ## Author
 
-**Yusuf** — AI/ML Engineer
-Building toward production-grade LLM and ML systems.
+**Yusuf** — AI / ML Engineer  
+Building production-grade AI systems, LLM architectures and intelligent financial tools.
+
+---
+
+⭐ If you find this project interesting, consider giving it a star.
 
 ---
 
