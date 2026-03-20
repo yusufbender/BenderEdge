@@ -293,7 +293,37 @@ def run_ml_agent(ticker: str) -> dict:
         trend_cross = int(df["Trend_Crossover"].iloc[-1])
         macd_buy = int(df["MACD_Buy_Signal"].iloc[-1])
 
-        # 9. LLM reasoning
+        # 9. SHAP feature importance
+        try:
+            import shap
+            explainer = shap.TreeExplainer(model)
+            shap_values = explainer.shap_values(X.iloc[[-1]])
+            
+            # Her feature'ın katkısı
+            shap_dict = {}
+            for i, feature in enumerate(FEATURES):
+                shap_dict[feature] = round(float(shap_values[0][i]), 4)
+            
+            # En etkili 5 feature (absolute değere göre sırala)
+            top_features = sorted(shap_dict.items(), key=lambda x: abs(x[1]), reverse=True)[:5]
+            
+            shap_summary = {
+                "values": shap_dict,
+                "top_features": [
+                    {
+                        "feature": f,
+                        "value": round(v, 4),
+                        "impact": "positive" if v > 0 else "negative",
+                        "strength": round(abs(v), 4)
+                    }
+                    for f, v in top_features
+                ],
+                "base_value": round(float(explainer.expected_value), 4),
+            }
+        except Exception as e:
+            shap_summary = {"error": str(e), "top_features": [], "values": {}}
+
+        # 10. LLM reasoning
         prompt = f"""You are a quantitative ML analyst. XGBoost model trained on {ticker} data.
 
 Model signal (5-day): {signal} (confidence: {confidence})
@@ -342,6 +372,7 @@ In 1-2 sentences, explain what the ML model is detecting and why it signals {sig
                 "sector": sector,
                 "params": sector_params,
             },
+            "shap": shap_summary,
         }
 
     except Exception as e:

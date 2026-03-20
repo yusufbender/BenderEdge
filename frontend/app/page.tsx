@@ -34,6 +34,11 @@ interface MLData {
     mid:   { label: string; signal: string; confidence: number; };
     long:  { label: string; signal: string; confidence: number; };
   };
+  shap?: {
+  top_features: { feature: string; value: number; impact: string; strength: number; }[];
+  base_value: number;
+  error?: string;
+  };
   backtest?: {
     initial_cash: number; final_value: number; total_return: number;
     trade_count: number; trades: {action: string; date: string; price: number; return_pct?: number}[];
@@ -407,6 +412,37 @@ export default function Home() {
                             </div>
                           </div>
                         )}
+                      </div>
+                    )}
+                    {/* SHAP Feature Importance */}
+                    {ml.shap && ml.shap.top_features.length > 0 && (
+                      <div className="mb-5">
+                        <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">
+                          Feature importance — what drove this decision
+                        </p>
+                        <div className="space-y-2">
+                          {ml.shap.top_features.map((f, i) => {
+                            const maxStrength = ml.shap!.top_features[0].strength;
+                            const barWidth = (f.strength / maxStrength) * 100;
+                            return (
+                              <div key={i} className="flex items-center gap-3">
+                                <span className="text-xs text-gray-400 w-36 shrink-0">{f.feature}</span>
+                                <div className="flex-1 bg-gray-800 rounded-full h-2">
+                                  <div
+                                    className={`h-2 rounded-full transition-all ${f.impact === "positive" ? "bg-green-500" : "bg-red-500"}`}
+                                    style={{ width: `${barWidth}%` }}
+                                  />
+                                </div>
+                                <span className={`text-xs font-medium w-16 text-right ${f.impact === "positive" ? "text-green-400" : "text-red-400"}`}>
+                                  {f.impact === "positive" ? "+" : ""}{f.value}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <p className="text-xs text-gray-600 mt-2">
+                          Green = pushed toward BUY · Red = pushed toward SELL
+                        </p>
                       </div>
                     )}
 
