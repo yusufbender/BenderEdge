@@ -29,6 +29,11 @@ interface MLData {
   macd_signal: number; trend_crossover: boolean;
   macd_buy_signal: boolean; reasoning: string; error?: string;
   long_signal: string; long_confidence: number;
+  horizon_signals?: {
+    short: { label: string; signal: string; confidence: number; };
+    mid:   { label: string; signal: string; confidence: number; };
+    long:  { label: string; signal: string; confidence: number; };
+  };
   backtest?: {
     initial_cash: number; final_value: number; total_return: number;
     trade_count: number; trades: {action: string; date: string; price: number; return_pct?: number}[];
@@ -316,9 +321,29 @@ export default function Home() {
                   </div>
                 ) : (
                   <>
-                    {/* Signals */}
-                    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-                      <p className="text-xs text-gray-500 uppercase tracking-widest mb-4">BenderQuant XGBoost</p>
+                    {/* Multi-horizon signals */}
+                    {ml.horizon_signals && (
+                      <div className="mb-5">
+                        <p className="text-xs text-gray-500 uppercase tracking-widest mb-3">Signal horizons</p>
+                        <div className="grid grid-cols-3 gap-3">
+                          {Object.values(ml.horizon_signals).map((h) => (
+                            <div key={h.label} className="bg-gray-800 rounded-xl p-4 text-center">
+                              <p className="text-xs text-gray-500 uppercase mb-2">{h.label}</p>
+                              <p className={`text-2xl font-bold mb-1 ${voteColor[h.signal] || "text-gray-400"}`}>
+                                {h.signal}
+                              </p>
+                              <div className="w-full bg-gray-700 rounded-full h-1 mb-1">
+                                <div className="h-1 rounded-full bg-purple-500" style={{ width: `${h.confidence * 100}%` }} />
+                              </div>
+                              <p className="text-xs text-gray-500">{(h.confidence * 100).toFixed(0)}%</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 5-day + 30-day (eski cards — artık horizon_signals varsa gösterme) */}
+                    {!ml.horizon_signals && (
                       <div className="grid grid-cols-2 gap-4 mb-5">
                         <div className="bg-gray-800 rounded-xl p-4 text-center">
                           <p className="text-xs text-gray-500 uppercase mb-1">5-day signal</p>
@@ -331,24 +356,7 @@ export default function Home() {
                           <p className="text-xs text-gray-400 mt-1">{(ml.long_confidence * 100).toFixed(0)}% confidence</p>
                         </div>
                       </div>
-                      <div className="grid grid-cols-3 gap-3 mb-4">
-                        <div className="bg-gray-800 rounded-lg p-3 text-center">
-                          <p className="text-xs text-gray-500 mb-1">CV score</p>
-                          <p className="text-lg font-bold text-purple-400">{ml.cv_score}</p>
-                          <p className="text-xs text-gray-500">±{ml.cv_std}</p>
-                        </div>
-                        <div className="bg-gray-800 rounded-lg p-3 text-center">
-                          <p className="text-xs text-gray-500 mb-1">Test accuracy</p>
-                          <p className={`text-lg font-bold ${ml.test_accuracy >= 60 ? "text-green-400" : "text-yellow-400"}`}>{ml.test_accuracy}%</p>
-                        </div>
-                        <div className="bg-gray-800 rounded-lg p-3 text-center">
-                          <p className="text-xs text-gray-500 mb-1">5-day trend</p>
-                          <p className="text-lg font-bold text-gray-300">{ml.trend_note.split(" ")[0]}</p>
-                          <p className="text-xs text-gray-500">buy signals</p>
-                        </div>
-                      </div>
-                      <p className="text-gray-400 text-sm">{ml.reasoning}</p>
-                    </div>
+                    )}
 
                     {/* Backtest */}
                     {ml.backtest && ml.metrics && (

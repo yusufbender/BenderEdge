@@ -173,26 +173,57 @@ def run_ml_agent(ticker: str) -> dict:
         buy_count = int(sum(last_5_preds))
         trend_note = f"{buy_count}/5 BUY signal in last 5 days"
 
-        # 6. 30 günlük uzun vadeli model
-        df_long = df.copy()
-        future_return_long = df_long["Close"].shift(-30) / df_long["Close"] - 1
-        df_long["Target_Long"] = (future_return_long > 0.05).astype(int)
-        df_long = df_long.dropna(subset=["Target_Long"])
-        X_long = df_long[FEATURES]
-        y_long = df_long["Target_Long"]
-        if len(X_long) > 60:
-            model_long = XGBClassifier(
-                n_estimators=200, max_depth=4,
-                learning_rate=0.05, eval_metric="logloss", verbosity=0
-            )
-            model_long.fit(X_long.iloc[:-20], y_long.iloc[:-20])
-            long_pred = int(model_long.predict(X_long.iloc[[-1]])[0])
-            long_proba = model_long.predict_proba(X_long.iloc[[-1]])[0]
-            long_signal = "BUY" if long_pred == 1 else "SELL"
-            long_confidence = round(float(max(long_proba)), 2)
-        else:
-            long_signal = "N/A"
-            long_confidence = 0.0
+        # 6. Multi-horizon modeller
+        horizons = {
+            "short": {"days": 5,   "threshold": 0.02, "label": "1-7 day"},
+            "mid":   {"days": 21,  "threshold": 0.04, "label": "1-3 month"},
+            "long":  {"days": 63,  "threshold": 0.08, "label": "3+ month"},
+        }
+
+        horizon_signals = {}
+
+        for key, config in horizons.items():
+            try:
+                df_h = df.copy()
+                future_return_h = df_h["Close"].shift(-config["days"]) / df_h["Close"] - 1
+                df_h["Target_H"] = (future_return_h > config["threshold"]).astype(int)
+                df_h = df_h.dropna(subset=["Target_H"])
+                X_h = df_h[FEATURES]
+                y_h = df_h["Target_H"]
+
+                if len(X_h) > 60 and y_h.nunique() > 1:
+                    model_h = XGBClassifier(
+                        n_estimators=200, max_depth=4,
+                        learning_rate=0.05, eval_metric="logloss", verbosity=0
+                    )
+                    model_h.fit(X_h.iloc[:-20], y_h.iloc[:-20])
+                    pred_h = int(model_h.predict(X_h.iloc[[-1]])[0])
+                    proba_h = model_h.predict_proba(X_h.iloc[[-1]])[0]
+                    signal_h = "BUY" if pred_h == 1 else "SELL"
+                    confidence_h = round(float(max(proba_h)), 2)
+                else:
+                    signal_h = "N/A"
+                    confidence_h = 0.0
+
+                horizon_signals[key] = {
+                    "label": config["label"],
+                    "signal": signal_h,
+                    "confidence": confidence_h,
+                    "days": config["days"],
+                    "threshold": config["threshold"],
+                }
+            except:
+                horizon_signals[key] = {
+                    "label": config["label"],
+                    "signal": "N/A",
+                    "confidence": 0.0,
+                    "days": config["days"],
+                    "threshold": config["threshold"],
+                }
+
+        # Geriye dönük uyumluluk için long_signal
+        long_signal = horizon_signals["long"]["signal"]
+        long_confidence = horizon_signals["long"]["confidence"]
 
         # 7. Backtest
         all_preds = model.predict(X)
@@ -261,6 +292,7 @@ In 1-2 sentences, explain what the ML model is detecting and why it signals {sig
             "reasoning": reasoning,
             "long_signal": long_signal,
             "long_confidence": long_confidence,
+            "horizon_signals": horizon_signals,
             "backtest": {
                 "initial_cash": initial_cash,
                 "final_value": final_value,
