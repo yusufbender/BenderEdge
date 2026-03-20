@@ -14,6 +14,26 @@ FEATURES = [
     "Volatility", "MACD_Buy_Signal"
 ]
 
+SECTOR_PARAMS = {
+    "Technology":         {"n_estimators": 300, "max_depth": 5, "learning_rate": 0.03, "subsample": 0.8},
+    "Financial Services": {"n_estimators": 200, "max_depth": 3, "learning_rate": 0.05, "subsample": 0.9},
+    "Energy":             {"n_estimators": 150, "max_depth": 4, "learning_rate": 0.08, "subsample": 0.85},
+    "Healthcare":         {"n_estimators": 200, "max_depth": 4, "learning_rate": 0.05, "subsample": 0.8},
+    "Consumer Cyclical":  {"n_estimators": 250, "max_depth": 4, "learning_rate": 0.04, "subsample": 0.85},
+    "Consumer Defensive": {"n_estimators": 180, "max_depth": 3, "learning_rate": 0.06, "subsample": 0.9},
+    "Industrials":        {"n_estimators": 200, "max_depth": 4, "learning_rate": 0.05, "subsample": 0.85},
+    "Basic Materials":    {"n_estimators": 170, "max_depth": 4, "learning_rate": 0.07, "subsample": 0.8},
+    "Real Estate":        {"n_estimators": 160, "max_depth": 3, "learning_rate": 0.06, "subsample": 0.9},
+    "Utilities":          {"n_estimators": 150, "max_depth": 3, "learning_rate": 0.05, "subsample": 0.9},
+    "Communication":      {"n_estimators": 220, "max_depth": 4, "learning_rate": 0.04, "subsample": 0.8},
+    "default":            {"n_estimators": 200, "max_depth": 4, "learning_rate": 0.05, "subsample": 0.85},
+}
+
+def get_sector_params(sector: str) -> dict:
+    for key in SECTOR_PARAMS:
+        if key.lower() in sector.lower():
+            return SECTOR_PARAMS[key]
+    return SECTOR_PARAMS["default"]
 
 def add_indicators(df):
     delta = df["Close"].diff()
@@ -145,10 +165,23 @@ def run_ml_agent(ticker: str) -> dict:
         X_train, X_test = X.iloc[:split], X.iloc[split:]
         y_train = y.iloc[:split]
 
-        # 1. Model eğitimi
+        # 0. Sektör parametrelerini önceden çek
+        sector = "default"
+        try:
+            info_pre = yf.Ticker(ticker).info
+            sector = info_pre.get("sector", "default") or "default"
+        except:
+            sector = "default"
+        sector_params = get_sector_params(sector)
+
+        # 1. Model eğitimi — sektör bazlı parametreler
         model = XGBClassifier(
-            n_estimators=200, max_depth=4,
-            learning_rate=0.05, eval_metric="logloss", verbosity=0,
+            n_estimators=sector_params["n_estimators"],
+            max_depth=sector_params["max_depth"],
+            learning_rate=sector_params["learning_rate"],
+            subsample=sector_params["subsample"],
+            eval_metric="logloss",
+            verbosity=0,
         )
         model.fit(X_train, y_train)
 
@@ -239,7 +272,7 @@ def run_ml_agent(ticker: str) -> dict:
             info = yf.Ticker(ticker).info
             fundamentals = {
                 "name": info.get("shortName", ticker),
-                "sector": info.get("sector", "N/A"),
+                "sector": sector,
                 "market_cap": info.get("marketCap"),
                 "pe_ratio": info.get("trailingPE"),
                 "eps": info.get("trailingEps"),
@@ -251,6 +284,8 @@ def run_ml_agent(ticker: str) -> dict:
             }
         except:
             fundamentals = {}
+
+        sector_params = get_sector_params(sector)
 
         rsi_val = round(float(df["RSI"].iloc[-1]), 2)
         macd_val = round(float(df["MACD"].iloc[-1]), 2)
@@ -303,6 +338,10 @@ In 1-2 sentences, explain what the ML model is detecting and why it signals {sig
             },
             "metrics": metrics,
             "fundamentals": fundamentals,
+            "sector_params": {
+                "sector": sector,
+                "params": sector_params,
+            },
         }
 
     except Exception as e:
