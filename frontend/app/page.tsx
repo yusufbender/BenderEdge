@@ -1,7 +1,7 @@
 "use client";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
 import { useState } from "react";
-
+import Link from "next/link";
 interface AgentVote { vote: string; confidence: number; }
 interface QuantData {
   current_price: number; change_1w: number; change_1m: number;
@@ -127,6 +127,11 @@ export default function Home() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold tracking-tight">Bender<span className="text-purple-400">Edge</span></h1>
           <p className="text-gray-500 mt-1 text-sm">Multi-agent AI stock research platform</p>
+          <div className="flex items-center gap-4 mt-2">
+            <Link href="/scanner" className="text-xs text-purple-400 hover:text-purple-300 transition">
+              Scanner →
+            </Link>
+          </div>
         </div>
 
         {/* Search */}
