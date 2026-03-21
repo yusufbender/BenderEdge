@@ -48,7 +48,7 @@ interface EarningsData {
   trend: string; vote: string; confidence: number; reasoning: string; error?: string;
 }
 
-const voteColor: Record<string, string> = { BUY: "text-green-400", SELL: "text-red-400", HOLD: "text-yellow-400" };
+const voteColor: Record<string, string> = { BUY: "text-green-400", SELL: "text-red-400", HOLD: "text-amber-400" };
 const voteBg: Record<string, string> = { BUY: "bg-green-500/10 border-green-500/20", SELL: "bg-red-500/10 border-red-500/20", HOLD: "bg-yellow-500/10 border-yellow-500/20" };
 const sentimentColor: Record<string, string> = { Bullish: "text-green-400", Bearish: "text-red-400", Neutral: "text-yellow-400" };
 const agentList = ["researcher", "quant", "sentiment", "ml", "insider", "macro", "earnings", "portfolio"];
@@ -294,11 +294,11 @@ export default function Home() {
                       <span>Score <span className="text-white/60">{portfolio?.confidence_score}</span></span>
                       <span>Weighted <span className="text-white/60">{portfolio?.weighted_score}</span></span>
                     </div>
-                    <div className="flex gap-2 justify-end">
+                    <div className="flex gap-2 justify-end flex-wrap">
                       {portfolio && Object.entries(portfolio.agent_votes).map(([agent, data]) => (
-                        <div key={agent} className="text-center">
-                          <p className={`text-xs font-bold ${voteColor[data.vote]}`}>{data.vote[0]}</p>
-                          <p className="text-xs text-white/20 capitalize">{agent.slice(0, 3)}</p>
+                        <div key={agent} className="text-center min-w-[32px]">
+                          <p className={`text-xs font-bold ${voteColor[data.vote]}`}>{data.vote}</p>
+                          <p className="text-xs text-white/20 uppercase">{agent.slice(0, 4)}</p>
                         </div>
                       ))}
                     </div>
@@ -347,7 +347,7 @@ export default function Home() {
                       <div className="grid grid-cols-4 gap-2 mb-4">
                         {Object.entries(portfolio.agent_votes).map(([agent, data]) => (
                           <div key={agent} className="bg-white/3 rounded-xl p-3 text-center">
-                            <p className="text-xs text-white/30 capitalize mb-1">{agent}</p>
+                            <p className="text-xs text-white/30 uppercase mb-1">{agent}</p>
                             <p className={`text-lg font-bold ${voteColor[data.vote]}`}>{data.vote}</p>
                             <div className="w-full bg-white/5 rounded-full h-0.5 mt-2">
                               <div className="h-0.5 rounded-full bg-purple-500" style={{ width: `${data.confidence * 100}%` }} />
