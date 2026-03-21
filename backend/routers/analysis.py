@@ -4,8 +4,11 @@ from pydantic import BaseModel
 from agents.researcher import run_researcher
 from agents.quant import run_quant
 from agents.sentiment import run_sentiment
-from agents.portfolio import run_portfolio
 from agents.ml_agent import run_ml_agent
+from agents.portfolio import run_portfolio
+from agents.insider import run_insider
+from agents.macro import run_macro
+from agents.earnings import run_earnings
 import json
 import yfinance as yf
 
@@ -30,7 +33,16 @@ async def stream_analysis(ticker: str):
     ml = run_ml_agent(ticker)
     yield event("ml", ml)
 
-    portfolio = run_portfolio(ticker, researcher, quant, sentiment, ml)
+    insider = run_insider(ticker)
+    yield event("insider", insider)
+
+    macro = run_macro(ticker)
+    yield event("macro", macro)
+
+    earnings = run_earnings(ticker)
+    yield event("earnings", earnings)
+
+    portfolio = run_portfolio(ticker, researcher, quant, sentiment, ml, insider, macro, earnings)
     yield event("portfolio", portfolio)
 
     yield event("done", {"ticker": ticker})
@@ -53,13 +65,19 @@ async def analyze(req: AnalysisRequest):
     quant = run_quant(ticker)
     sentiment = run_sentiment(ticker, researcher.get("headlines", []))
     ml = run_ml_agent(ticker)
-    portfolio = run_portfolio(ticker, researcher, quant, sentiment, ml)
+    insider = run_insider(ticker)
+    macro = run_macro(ticker)
+    earnings = run_earnings(ticker)
+    portfolio = run_portfolio(ticker, researcher, quant, sentiment, ml, insider, macro, earnings)
     return {
         "ticker": ticker,
         "researcher": researcher,
         "quant": quant,
         "sentiment": sentiment,
         "ml": ml,
+        "insider": insider,
+        "macro": macro,
+        "earnings": earnings,
         "portfolio": portfolio,
     }
 

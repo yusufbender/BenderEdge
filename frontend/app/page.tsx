@@ -52,6 +52,30 @@ interface MLData {
     dividend_yield: number; beta: number; ai_mention: string;
   };
 }
+interface InsiderData {
+  signal: string; vote: string; confidence: number;
+  transactions: { date: string; name: string; form: string; }[];
+  transaction_count: number; has_data: boolean;
+  reasoning: string; error?: string;
+}
+
+interface MacroData {
+  macro_data: Record<string, { value: number; change: number; date: string; }>;
+  yield_spread: number | null;
+  environment: string;
+  vote: string; confidence: number;
+  reasoning: string; error?: string;
+}
+
+interface EarningsData {
+  quarterly: { date: string; eps_estimate: number; eps_actual: number; surprise_pct: number; beat: boolean; }[];
+  beat_rate: number;
+  avg_surprise: number;
+  next_earnings: string | null;
+  trend: string;
+  vote: string; confidence: number;
+  reasoning: string; error?: string;
+}
 
 const verdictStyle: Record<string, { border: string; text: string; bg: string }> = {
   BUY:  { border: "border-green-500",  text: "text-green-400",  bg: "bg-green-500/10" },
@@ -60,8 +84,8 @@ const verdictStyle: Record<string, { border: string; text: string; bg: string }>
 };
 const voteColor: Record<string, string> = { BUY: "text-green-400", SELL: "text-red-400", HOLD: "text-yellow-400" };
 const sentimentColor: Record<string, string> = { Bullish: "text-green-400", Bearish: "text-red-400", Neutral: "text-yellow-400" };
-const agentList = ["researcher", "quant", "sentiment", "ml", "portfolio"];
-const TABS = ["Overview", "Quant", "ML Model", "Research"];
+const agentList = ["researcher", "quant", "sentiment", "ml", "insider", "macro", "earnings", "portfolio"];
+const TABS = ["Overview", "Quant", "ML Model", "Intelligence", "Research"];
 
 export default function Home() {
   const [ticker, setTicker] = useState("");
@@ -73,6 +97,9 @@ export default function Home() {
   const [sentiment, setSentiment] = useState<SentimentData | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
   const [ml, setMl] = useState<MLData | null>(null);
+  const [insider, setInsider] = useState<InsiderData | null>(null);
+  const [macro, setMacro] = useState<MacroData | null>(null);
+  const [earnings, setEarnings] = useState<EarningsData | null>(null);
   const [chartData, setChartData] = useState<{ date: string; close: number }[]>([]);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState("Overview");
@@ -81,7 +108,7 @@ export default function Home() {
     if (!ticker) return;
     const cleanTicker = ticker.trim(); // ← bunu ekle
     setLoading(true); setError("");
-    setResearcher(null); setQuant(null); setSentiment(null);
+    setResearcher(null); setQuant(null); setSentiment(null);setInsider(null); setMacro(null); setEarnings(null);
     setPortfolio(null); setMl(null); setChartData([]); setDoneAgents([]);
     setActiveTab("Overview");
 
@@ -109,7 +136,10 @@ export default function Home() {
           if (agent === "researcher") { setResearcher(data); setActiveAgent("quant"); setDoneAgents(p => [...p, "researcher"]); }
           else if (agent === "quant") { setQuant(data); setActiveAgent("sentiment"); setDoneAgents(p => [...p, "quant"]); }
           else if (agent === "sentiment") { setSentiment(data); setActiveAgent("ml"); setDoneAgents(p => [...p, "sentiment"]); }
-          else if (agent === "ml") { setMl(data); setActiveAgent("portfolio"); setDoneAgents(p => [...p, "ml"]); }
+          else if (agent === "ml") { setMl(data); setActiveAgent("insider"); setDoneAgents(p => [...p, "ml"]); }
+          else if (agent === "insider") { setInsider(data); setActiveAgent("macro"); setDoneAgents(p => [...p, "insider"]); }
+          else if (agent === "macro") { setMacro(data); setActiveAgent("earnings"); setDoneAgents(p => [...p, "macro"]); }
+          else if (agent === "earnings") { setEarnings(data); setActiveAgent("portfolio"); setDoneAgents(p => [...p, "earnings"]); }
           else if (agent === "portfolio") { setPortfolio(data); setActiveAgent(""); setDoneAgents(p => [...p, "portfolio"]); }
           else if (agent === "done") { setLoading(false); }
         } catch { }
@@ -478,6 +508,158 @@ export default function Home() {
                     )}
                   </>
                 )}
+              </div>
+            )}
+
+            {/* Tab: Intelligence */}
+            {activeTab === "Intelligence" && (
+              <div className="space-y-4">
+
+                {/* Insider */}
+                {insider && (
+                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-widest">Insider trading</p>
+                        <p className="text-xs text-gray-600 mt-0.5">SEC EDGAR Form 4</p>
+                      </div>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${voteColor[insider.vote]} bg-gray-800`}>
+                        {insider.vote} {(insider.confidence * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    {insider.error ? (
+                      <p className="text-red-400 text-sm">{insider.error}</p>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3 mb-4">
+                          <p className={`text-2xl font-bold ${insider.signal === "Bullish" ? "text-green-400" : insider.signal === "Bearish" ? "text-red-400" : "text-yellow-400"}`}>
+                            {insider.signal}
+                          </p>
+                          <p className="text-gray-400 text-sm">{insider.transaction_count} Form 4 filings (last 90 days)</p>
+                        </div>
+                        {insider.transactions.length > 0 ? (
+                          <div className="space-y-2 mb-3">
+                            {insider.transactions.map((t, i) => (
+                              <div key={i} className="flex justify-between bg-gray-800 rounded-lg px-3 py-2">
+                                <span className="text-gray-400 text-xs">{t.name}</span>
+                                <span className="text-gray-500 text-xs">{t.date}</span>
+                                <span className="text-purple-400 text-xs">Form {t.form}</span>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-gray-500 text-sm mb-3">No recent insider filings found.</p>
+                        )}
+                        <p className="text-gray-400 text-sm italic">{insider.reasoning}</p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Macro */}
+                {macro && (
+                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-widest">Macro environment</p>
+                        <p className="text-xs text-gray-600 mt-0.5">FRED API</p>
+                      </div>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${voteColor[macro.vote]} bg-gray-800`}>
+                        {macro.vote} {(macro.confidence * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    {macro.error ? (
+                      <p className="text-red-400 text-sm">{macro.error}</p>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-3 mb-4">
+                          <p className={`text-2xl font-bold ${macro.environment === "Risk-On" ? "text-green-400" : macro.environment === "Risk-Off" ? "text-red-400" : "text-yellow-400"}`}>
+                            {macro.environment}
+                          </p>
+                          {macro.yield_spread !== null && (
+                            <p className={`text-sm ${macro.yield_spread > 0 ? "text-green-400" : "text-red-400"}`}>
+                              Yield spread: {macro.yield_spread > 0 ? "+" : ""}{macro.yield_spread}%
+                              {macro.yield_spread < 0 && " ⚠️ Inverted"}
+                            </p>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mb-4">
+                          {Object.entries(macro.macro_data).filter(([k]) => k !== "yield_spread").map(([key, d]) => (
+                            <div key={key} className="flex justify-between bg-gray-800 rounded-lg px-3 py-2">
+                              <span className="text-gray-400 text-xs capitalize">{key.replace("_", " ")}</span>
+                              <span className={`text-xs font-medium ${d.change > 0 ? "text-red-400" : d.change < 0 ? "text-green-400" : "text-gray-300"}`}>
+                                {d.value}% {d.change !== 0 && `(${d.change > 0 ? "+" : ""}${d.change})`}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                        <p className="text-gray-400 text-sm italic">{macro.reasoning}</p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {/* Earnings */}
+                {earnings && (
+                  <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+                    <div className="flex items-center justify-between mb-4">
+                      <div>
+                        <p className="text-xs text-gray-500 uppercase tracking-widest">Earnings analysis</p>
+                        <p className="text-xs text-gray-600 mt-0.5">EPS history + surprise</p>
+                      </div>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${voteColor[earnings.vote]} bg-gray-800`}>
+                        {earnings.vote} {(earnings.confidence * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    {earnings.error ? (
+                      <p className="text-red-400 text-sm">{earnings.error}</p>
+                    ) : (
+                      <>
+                        <div className="grid grid-cols-3 gap-3 mb-4">
+                          <div className="bg-gray-800 rounded-lg p-3 text-center">
+                            <p className="text-xs text-gray-500 mb-1">Beat rate</p>
+                            <p className={`text-xl font-bold ${earnings.beat_rate >= 75 ? "text-green-400" : earnings.beat_rate >= 50 ? "text-yellow-400" : "text-red-400"}`}>
+                              {earnings.beat_rate}%
+                            </p>
+                          </div>
+                          <div className="bg-gray-800 rounded-lg p-3 text-center">
+                            <p className="text-xs text-gray-500 mb-1">Avg surprise</p>
+                            <p className={`text-xl font-bold ${earnings.avg_surprise > 0 ? "text-green-400" : "text-red-400"}`}>
+                              {earnings.avg_surprise > 0 ? "+" : ""}{earnings.avg_surprise}%
+                            </p>
+                          </div>
+                          <div className="bg-gray-800 rounded-lg p-3 text-center">
+                            <p className="text-xs text-gray-500 mb-1">Trend</p>
+                            <p className={`text-xl font-bold ${earnings.trend === "Improving" ? "text-green-400" : earnings.trend === "Declining" ? "text-red-400" : "text-yellow-400"}`}>
+                              {earnings.trend}
+                            </p>
+                          </div>
+                        </div>
+                        {earnings.next_earnings && (
+                          <div className="bg-purple-950/30 border border-purple-800/30 rounded-lg px-3 py-2 mb-4">
+                            <p className="text-xs text-purple-400">Next earnings: {earnings.next_earnings}</p>
+                          </div>
+                        )}
+                        {earnings.quarterly.length > 0 && (
+                          <div className="space-y-2">
+                            {earnings.quarterly.map((q, i) => (
+                              <div key={i} className="flex justify-between items-center bg-gray-800 rounded-lg px-3 py-2">
+                                <span className="text-gray-400 text-xs">{q.date}</span>
+                                <span className="text-gray-300 text-xs">Est: {q.eps_estimate}</span>
+                                <span className="text-gray-300 text-xs">Act: {q.eps_actual}</span>
+                                <span className={`text-xs font-bold ${q.beat ? "text-green-400" : "text-red-400"}`}>
+                                  {q.beat ? "BEAT" : "MISS"} {q.surprise_pct > 0 ? "+" : ""}{q.surprise_pct}%
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-gray-400 text-sm mt-3 italic">{earnings.reasoning}</p>
+                      </>
+                    )}
+                  </div>
+                )}
+
               </div>
             )}
 

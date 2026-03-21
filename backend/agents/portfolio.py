@@ -3,14 +3,17 @@ from langchain_ollama import OllamaLLM
 llm = OllamaLLM(model="qwen2.5:7b")
 
 AGENT_WEIGHTS = {
-    "quant": 0.35,
-    "ml": 0.30,
-    "sentiment": 0.20,
-    "researcher": 0.15,
+    "quant":    0.30,
+    "ml":       0.25,
+    "sentiment":0.15,
+    "researcher":0.10,
+    "earnings": 0.10,
+    "macro":    0.05,
+    "insider":  0.05,
 }
 
 VOTE_SCORES = {
-    "BUY": 1.0,
+    "BUY":  1.0,
     "HOLD": 0.0,
     "SELL": -1.0,
 }
@@ -39,7 +42,7 @@ def calculate_weighted_verdict(votes: dict) -> dict:
         verdict = "HOLD"
 
     max_votes = max(vote_counts.values())
-    agreement_ratio = max_votes / 4
+    agreement_ratio = max_votes / len(AGENT_WEIGHTS)
     signal_strength = abs(normalized_score)
     confidence_score = round((agreement_ratio * 0.6 + signal_strength * 0.4), 2)
 
@@ -59,29 +62,35 @@ def calculate_weighted_verdict(votes: dict) -> dict:
         "agent_agreement": round(agreement_ratio, 2),
     }
 
-def run_portfolio(ticker: str, researcher: dict, quant: dict, sentiment: dict, ml: dict) -> dict:
+
+def run_portfolio(ticker: str, researcher: dict, quant: dict, sentiment: dict,
+                  ml: dict, insider: dict = None, macro: dict = None, earnings: dict = None) -> dict:
+
+    insider = insider or {}
+    macro = macro or {}
+    earnings = earnings or {}
+
     votes = {
         "researcher": {"vote": researcher.get("vote", "HOLD"), "confidence": researcher.get("confidence", 0.5)},
         "quant":      {"vote": quant.get("vote", "HOLD"),       "confidence": quant.get("confidence", 0.5)},
         "sentiment":  {"vote": sentiment.get("vote", "HOLD"),   "confidence": sentiment.get("confidence", 0.5)},
         "ml":         {"vote": ml.get("vote", "HOLD"),          "confidence": ml.get("confidence", 0.5)},
+        "insider":    {"vote": insider.get("vote", "HOLD"),     "confidence": insider.get("confidence", 0.3)},
+        "macro":      {"vote": macro.get("vote", "HOLD"),       "confidence": macro.get("confidence", 0.3)},
+        "earnings":   {"vote": earnings.get("vote", "HOLD"),    "confidence": earnings.get("confidence", 0.3)},
     }
 
     weighted = calculate_weighted_verdict(votes)
 
-    prompt = f"""You are a senior portfolio manager. Four agents have voted on {ticker}:
+    prompt = f"""You are a senior portfolio manager. Seven agents have voted on {ticker}:
 
-Researcher: {votes['researcher']['vote']} (confidence: {votes['researcher']['confidence']})
-  Reasoning: {researcher.get('reasoning', 'N/A')}
-
-Quant: {votes['quant']['vote']} (confidence: {votes['quant']['confidence']})
-  Reasoning: {quant.get('reasoning', 'N/A')}
-
-Sentiment: {votes['sentiment']['vote']} (confidence: {votes['sentiment']['confidence']})
-  Reasoning: {sentiment.get('reasoning', 'N/A')}
-
-ML Model (BenderQuant): {votes['ml']['vote']} (confidence: {votes['ml']['confidence']})
-  Reasoning: {ml.get('reasoning', 'N/A')}
+Quant:      {votes['quant']['vote']} ({votes['quant']['confidence']}) — {quant.get('reasoning', 'N/A')}
+ML Model:   {votes['ml']['vote']} ({votes['ml']['confidence']}) — {ml.get('reasoning', 'N/A')}
+Sentiment:  {votes['sentiment']['vote']} ({votes['sentiment']['confidence']}) — {sentiment.get('reasoning', 'N/A')}
+Researcher: {votes['researcher']['vote']} ({votes['researcher']['confidence']}) — {researcher.get('reasoning', 'N/A')}
+Earnings:   {votes['earnings']['vote']} ({votes['earnings']['confidence']}) — {earnings.get('reasoning', 'N/A')}
+Macro:      {votes['macro']['vote']} ({votes['macro']['confidence']}) — {macro.get('reasoning', 'N/A')}
+Insider:    {votes['insider']['vote']} ({votes['insider']['confidence']}) — {insider.get('reasoning', 'N/A')}
 
 Weighted verdict: {weighted['verdict']} (score: {weighted['weighted_score']})
 Agent agreement: {weighted['agent_agreement']}
@@ -101,9 +110,12 @@ Write a 2-3 sentence final rationale for the {weighted['verdict']} verdict."""
         "agent_agreement": weighted["agent_agreement"],
         "agent_votes": {
             "researcher": votes["researcher"],
-            "quant": votes["quant"],
-            "sentiment": votes["sentiment"],
-            "ml": votes["ml"],
+            "quant":      votes["quant"],
+            "sentiment":  votes["sentiment"],
+            "ml":         votes["ml"],
+            "insider":    votes["insider"],
+            "macro":      votes["macro"],
+            "earnings":   votes["earnings"],
         },
         "rationale": rationale
     }
