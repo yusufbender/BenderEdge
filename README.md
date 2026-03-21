@@ -10,6 +10,7 @@
 [![XGBoost](https://img.shields.io/badge/XGBoost-ML-orange?style=flat-square)](https://xgboost.ai)
 [![LangChain](https://img.shields.io/badge/LangChain-Agents-green?style=flat-square)](https://langchain.com)
 [![Ollama](https://img.shields.io/badge/Ollama-Local_LLM-purple?style=flat-square)](https://ollama.com)
+[![SQLite](https://img.shields.io/badge/SQLite-Database-blue?style=flat-square&logo=sqlite)](https://sqlite.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
 
 ---
@@ -39,6 +40,11 @@ Most stock analysis tools give you a single signal from a single model. BenderEd
 - **5 agents with different methodologies** vote independently
 - **Disagreement is a signal** — low agreement = lower confidence
 - **ML model trains on-the-fly** for each ticker, no stale pre-trained weights
+- **Sector-aware XGBoost** — different hyperparameters per sector
+- **Multi-horizon signals** — 1-7 day, 1-3 month, 3+ month predictions
+- **SHAP explainability** — understand what drove each decision
+- **BenderScanner** — scan entire indices for opportunities
+- **Accuracy tracking** — validate predictions against real price movements
 - **Fully local** — Ollama LLM, no API costs, no data sent to third parties
 - **Real-time streaming** — watch each agent work as it happens
 
@@ -46,7 +52,7 @@ Most stock analysis tools give you a single signal from a single model. BenderEd
 
 ## Architecture
 ```
-User Input (Ticker)
+User Input (Ticker / Index)
          │
          ▼
 FastAPI Orchestrator (LangChain)
@@ -54,7 +60,7 @@ FastAPI Orchestrator (LangChain)
          ├─── Researcher Agent  ──► NewsAPI + LLM analysis
          ├─── Quant Agent       ──► RSI, MACD, BB, SMA, Volume
          ├─── Sentiment Agent   ──► Headline tone scoring
-         ├─── BenderQuant Agent ──► XGBoost on-the-fly training
+         ├─── BenderQuant Agent ──► XGBoost on-the-fly + SHAP
          │
          ▼
 Portfolio Agent (Weighted Voting)
@@ -62,8 +68,8 @@ Portfolio Agent (Weighted Voting)
          ▼
   BUY / SELL / HOLD + Confidence Score
          │
-         ▼
-SSE Streaming ──► Next.js Dashboard
+         ├──► SSE Streaming → Next.js Dashboard
+         └──► SQLite → History + Accuracy Tracking
 ```
 
 ---
@@ -95,26 +101,28 @@ Analyzes news headline tone and produces a numerical sentiment score with direct
 ### 🤖 BenderQuant ML Agent
 The most sophisticated agent. Powered by **XGBoost**, trained on-the-fly using 2 years of OHLCV data for the requested ticker.
 
-**Signals:**
-- 5-day short-term prediction
-- 30-day long-term prediction
+**Multi-horizon signals:**
+- 1-7 day short-term prediction
+- 1-3 month mid-term prediction
+- 3+ month long-term prediction
 
-**Model quality:**
+**Sector-aware training:**
+Each sector uses optimized XGBoost hyperparameters — Technology, Financial, Energy, Healthcare, and 7 more sectors each have tuned parameters for better accuracy.
+
+**SHAP Explainability:**
+Every decision comes with feature importance — see exactly which indicator drove the model's verdict.
+
+**Model quality metrics:**
 - 5-fold cross-validation score
 - Test set accuracy
 
 **Backtest (2 years):**
-- Total return
-- Sharpe ratio
-- Max drawdown
-- CAGR
-- Equity curve
-- Recent trade log
+- Total return · Sharpe ratio · Max drawdown · CAGR
+- Equity curve · Recent trade log
 
 **Fundamentals:**
-- P/E ratio · EPS · Market Cap
-- Beta · 52-week high/low
-- Sector · AI company detection
+- P/E ratio · EPS · Market Cap · Beta
+- 52-week high/low · Sector · AI company detection
 
 > Powered by [BenderQuant](https://github.com/yusufbender/benderquant) — a standalone XGBoost financial classification project.
 
@@ -130,6 +138,24 @@ Aggregates all agent votes using a weighted system designed to prioritize quanti
 ```
 confidence_score = agent_agreement × signal_strength
 ```
+
+---
+
+## BenderScanner
+
+Scan entire market indices automatically. BenderScanner runs all 5 agents on each ticker and ranks opportunities by signal strength.
+
+**Supported indices:**
+- S&P 500 (top 20)
+- NASDAQ 100 (top 20)
+- BIST 50
+- BIST 100
+
+**Accuracy Tracker:**
+Every analysis is saved to SQLite. After 7 days, the system automatically validates predictions against real price movements and calculates:
+- Overall accuracy %
+- Accuracy by verdict (BUY / SELL / HOLD)
+- Average return per signal type
 
 ---
 
@@ -151,6 +177,16 @@ confidence_score = agent_agreement × signal_strength
 
  Agreement: 75%  |  BUY: 0  SELL: 3  HOLD: 1
 
+ Multi-horizon:
+  1-7 day  →  SELL 97%
+  1-3 month → SELL 83%
+  3+ month →  SELL 99%
+
+ SHAP Top Features:
+  RSI            +1.28  (BUY pressure)
+  Volatility     -0.48  (SELL pressure)
+  MACD           +0.37  (BUY pressure)
+
  BenderQuant Backtest (2Y):
   Return: +340%  |  Sharpe: 2.1  |  Max DD: -9.2%
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -164,10 +200,11 @@ confidence_score = agent_agreement × signal_strength
 |-------|-----------|---------|
 | Frontend | Next.js 14 + Tailwind + Recharts | Dashboard UI |
 | Backend | FastAPI + Python | API + orchestration |
-| ML | XGBoost + scikit-learn + pandas | On-the-fly model training |
+| ML | XGBoost + scikit-learn + SHAP | On-the-fly model training |
 | LLM | Ollama (Qwen2.5:7b) + LangChain | Agent reasoning |
 | Data | yfinance + NewsAPI | Price + news data |
 | Streaming | Server-Sent Events (SSE) | Real-time agent output |
+| Database | SQLite | Analysis history + validation |
 
 ---
 
@@ -177,9 +214,14 @@ confidence_score = agent_agreement × signal_strength
 - ✅ **Tab-based dashboard** — Overview / Quant / ML Model / Research
 - ✅ **Weighted multi-agent voting** with quantified confidence scoring
 - ✅ **On-the-fly XGBoost training** — no stale pre-trained weights
-- ✅ **Dual ML signals** — 5-day and 30-day horizons
+- ✅ **Sector-aware hyperparameters** — 11 sectors with optimized params
+- ✅ **Multi-horizon ML signals** — 1-7 day / 1-3 month / 3+ month
+- ✅ **SHAP feature importance** — explainable AI decisions
 - ✅ **Full backtesting** — Sharpe, Max Drawdown, CAGR, equity curve
 - ✅ **Fundamental analysis** — P/E, EPS, Market Cap, Beta
+- ✅ **BenderScanner** — scan S&P500, NASDAQ100, BIST50, BIST100
+- ✅ **Accuracy tracking** — validate predictions vs real price movements
+- ✅ **Analysis history** — SQLite persistence across sessions
 - ✅ **Global market support** — NYSE, NASDAQ, BIST, LSE, Frankfurt, Tokyo
 - ✅ **Spotlight headlines** with Risk / Catalyst extraction
 - ✅ **Fully local LLM** — no API costs, no data leakage
@@ -220,7 +262,8 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000)
+Open [http://localhost:3000](http://localhost:3000)  
+Scanner: [http://localhost:3000/scanner](http://localhost:3000/scanner)
 
 ---
 
@@ -249,24 +292,43 @@ Open [http://localhost:3000](http://localhost:3000)
 - [x] Fundamental data
 - [x] Global market support
 
-### 🔄 v1.1 — Signal Quality (In Progress)
-- [ ] SHAP feature importance visualization
-- [ ] Agent confidence calibration
-- [ ] Multi-ticker comparison view
-- [ ] Watchlist / portfolio tracking
+### ✅ v1.1 — Multi-horizon Signals
+- [x] 1-7 day short-term signal
+- [x] 1-3 month mid-term signal
+- [x] 3+ month long-term signal
+- [x] Per-horizon XGBoost models
 
-### 🔮 v1.2 — Intelligence Layer
-- [ ] Insider trading signals (SEC EDGAR)
-- [ ] Macro agent (FRED API — rates, inflation, GDP)
-- [ ] Earnings agent (EPS beat/miss history)
-- [ ] Options flow agent (put/call ratio, IV)
+### ✅ v1.2 — Sector Intelligence
+- [x] Sector-based XGBoost hyperparameter optimization
+- [x] 11 sector profiles (Technology, Financial, Energy...)
+- [x] Automatic sector detection via yfinance
+
+### ✅ v1.3 — Explainability
+- [x] SHAP feature importance
+- [x] Top 5 features driving each decision
+- [x] Visual bar chart in ML Model tab
+
+### ✅ v1.4 — BenderScanner
+- [x] Multi-index scanner (SP500, NASDAQ100, BIST50, BIST100)
+- [x] SQLite analysis history
+- [x] 7-day prediction validation
+- [x] Accuracy tracker by verdict type
+
+### 🔮 v1.5 — New Agents
+- [ ] Insider Trading Agent (SEC EDGAR Form 4)
+- [ ] Macro Agent (FRED API — rates, inflation, GDP)
+- [ ] Earnings Agent (EPS beat/miss history)
+
+### 🔮 v1.6 — MLOps
+- [ ] Redis cache
+- [ ] MLflow experiment tracking
+- [ ] LangGraph agent orchestration
 
 ### 🚀 v2.0 — Production
 - [ ] User authentication
 - [ ] Alert system (price + signal triggers)
 - [ ] Deploy on Railway + Vercel
-- [ ] Docker compose setup
-- [ ] PostgreSQL for analysis history
+- [ ] Docker Compose setup
 
 ---
 
@@ -278,15 +340,19 @@ BenderEdge/
 │   │   ├── researcher.py     # News + LLM analysis
 │   │   ├── quant.py          # Technical indicators
 │   │   ├── sentiment.py      # Headline tone scoring
-│   │   ├── ml_agent.py       # XGBoost on-the-fly
+│   │   ├── ml_agent.py       # XGBoost + SHAP + multi-horizon
 │   │   └── portfolio.py      # Weighted voting
 │   ├── routers/
-│   │   └── analysis.py       # SSE + REST endpoints
+│   │   ├── analysis.py       # SSE + REST endpoints
+│   │   └── scanner.py        # Market scanner endpoints
+│   ├── database.py           # SQLite — history + validation
 │   ├── models/               # Saved model artifacts
 │   └── main.py               # FastAPI app
 └── frontend/
     └── app/
-        └── page.tsx          # Next.js dashboard
+        ├── page.tsx           # Main dashboard
+        └── scanner/
+            └── page.tsx       # BenderScanner
 ```
 
 ---
