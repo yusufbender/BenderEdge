@@ -262,7 +262,9 @@ export default function Scanner() {
                         <div className="flex items-center gap-6">
                           <div className="text-right">
                             <p className="text-xs text-gray-500">Price</p>
-                            <p className="text-sm font-medium text-white">${r.price}</p>
+                            <p className="text-sm font-medium text-white">
+                            {r.ticker.endsWith(".IS") ? "₺" : r.ticker.endsWith(".L") ? "£" : "$"}{r.price}
+                            </p>
                           </div>
                           <div className="text-right">
                             <p className="text-xs text-gray-500">Confidence</p>

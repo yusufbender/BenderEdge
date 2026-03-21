@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 interface AgentVote { vote: string; confidence: number; }
 interface QuantData {
+  currency: string;
   current_price: number; change_1w: number; change_1m: number;
   sma_20: number; sma_50: number; above_sma: boolean;
   rsi: number; rsi_signal: string; macd: number; macd_signal: string;
@@ -78,16 +79,17 @@ export default function Home() {
 
   const analyze = async () => {
     if (!ticker) return;
+    const cleanTicker = ticker.trim(); // ← bunu ekle
     setLoading(true); setError("");
     setResearcher(null); setQuant(null); setSentiment(null);
     setPortfolio(null); setMl(null); setChartData([]); setDoneAgents([]);
     setActiveTab("Overview");
 
-    fetch(`http://127.0.0.1:8000/api/chart/${ticker}`)
+    fetch(`http://127.0.0.1:8000/api/chart/${cleanTicker}`)
       .then(r => r.json())
       .then(d => setChartData(d.data || []));
 
-    const response = await fetch(`http://127.0.0.1:8000/api/analyze/stream?ticker=${ticker}`);
+    const response = await fetch(`http://127.0.0.1:8000/api/analyze/stream?ticker=${cleanTicker}`);
     if (!response.body) { setError("Stream failed."); setLoading(false); return; }
 
     const reader = response.body.getReader();
@@ -228,8 +230,8 @@ export default function Home() {
                     <ResponsiveContainer width="100%" height={200}>
                       <LineChart data={chartData}>
                         <XAxis dataKey="date" tick={{ fill: "#6b7280", fontSize: 11 }} tickFormatter={(v) => v.slice(5)} interval="preserveStartEnd" />
-                        <YAxis tick={{ fill: "#6b7280", fontSize: 11 }} domain={["auto", "auto"]} width={55} tickFormatter={(v) => `$${v}`} />
-                        <Tooltip contentStyle={{ background: "#111827", border: "1px solid #374151", borderRadius: 8 }} labelStyle={{ color: "#9ca3af", fontSize: 12 }} formatter={(v: number) => [`$${v}`, "Close"]} />
+                        <YAxis tick={{ fill: "#6b7280", fontSize: 11 }} domain={["auto", "auto"]} width={55} tickFormatter={(v) => `${quant.currency}${v}`} />
+                        <Tooltip contentStyle={{ background: "#111827", border: "1px solid #374151", borderRadius: 8 }} labelStyle={{ color: "#9ca3af", fontSize: 12 }} formatter={(v: number) => [`${quant.currency}${v}`, "Close"]} />
                         <ReferenceLine y={quant.sma_20} stroke="#a855f7" strokeDasharray="4 4" label={{ value: "SMA20", fill: "#a855f7", fontSize: 10 }} />
                         <Line type="monotone" dataKey="close" stroke="#818cf8" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#818cf8" }} />
                       </LineChart>
@@ -296,19 +298,19 @@ export default function Home() {
                     {quant.vote} {(quant.confidence * 100).toFixed(0)}%
                   </span>
                 </div>
-                <p className="text-4xl font-bold mb-6">${quant.current_price}</p>
+                <p className="text-4xl font-bold mb-6">{quant.currency}{quant.current_price}</p>
                 <div className="grid grid-cols-2 gap-3 mb-5">
                   {([
                     ["1 week", `${quant.change_1w > 0 ? "+" : ""}${quant.change_1w}%`, quant.change_1w >= 0],
                     ["1 month", `${quant.change_1m > 0 ? "+" : ""}${quant.change_1m}%`, quant.change_1m >= 0],
                     ["RSI (14)", `${quant.rsi} — ${quant.rsi_signal}`, quant.rsi_signal === "oversold" ? true : quant.rsi_signal === "overbought" ? false : null],
                     ["MACD", `${quant.macd} — ${quant.macd_signal}`, quant.macd_signal === "bullish"],
-                    ["SMA 20", `$${quant.sma_20}`, quant.above_sma],
-                    ["SMA 50", `$${quant.sma_50}`, quant.current_price > quant.sma_50],
+                    ["SMA 20", `${quant.currency}${quant.sma_20}`, quant.above_sma],
+                    ["SMA 50", `${quant.currency}${quant.sma_50}`, quant.current_price > quant.sma_50],
                     ["Bollinger", quant.bb_position, null],
                     ["Trend", quant.trend, quant.trend === "bullish"],
-                    ["Support", `$${quant.support}`, null],
-                    ["Resistance", `$${quant.resistance}`, null],
+                    ["Support", `${quant.currency}${quant.support}`, null],
+                    ["Resistance", `${quant.currency}${quant.resistance}`, null],
                     ["Volume spike", quant.volume_spike ? "Yes" : "No", quant.volume_spike ? true : null],
                   ] as [string, string, boolean | null][]).map(([label, value, positive]) => (
                     <div key={label} className="flex justify-between bg-gray-800 rounded-lg px-3 py-2">
@@ -406,7 +408,7 @@ export default function Home() {
                                 <div key={i} className="flex justify-between items-center bg-gray-800 rounded-lg px-3 py-2">
                                   <span className={`text-xs font-bold ${t.action === "BUY" ? "text-green-400" : "text-red-400"}`}>{t.action}</span>
                                   <span className="text-gray-400 text-xs">{t.date}</span>
-                                  <span className="text-gray-300 text-xs">${t.price}</span>
+                                  <span className="text-gray-300 text-xs">{quant?.currency || "$"}{t.price}</span>
                                   {t.return_pct !== undefined && (
                                     <span className={`text-xs font-medium ${t.return_pct >= 0 ? "text-green-400" : "text-red-400"}`}>
                                       {t.return_pct > 0 ? "+" : ""}{t.return_pct}%
@@ -458,11 +460,11 @@ export default function Home() {
                         <div className="grid grid-cols-2 gap-3">
                           {([
                             ["Sector", ml.fundamentals.sector, null],
-                            ["Market cap", ml.fundamentals.market_cap ? `$${(ml.fundamentals.market_cap / 1e9).toFixed(1)}B` : "N/A", null],
+                            ["Market cap", ml.fundamentals.market_cap ? `${quant?.currency || "$"}${(ml.fundamentals.market_cap / 1e9).toFixed(1)}B` : "N/A", null],
                             ["P/E ratio", ml.fundamentals.pe_ratio?.toFixed(1) ?? "N/A", null],
-                            ["EPS", ml.fundamentals.eps ? `$${ml.fundamentals.eps.toFixed(2)}` : "N/A", ml.fundamentals.eps > 0],
-                            ["52w high", ml.fundamentals.week_52_high ? `$${ml.fundamentals.week_52_high}` : "N/A", null],
-                            ["52w low", ml.fundamentals.week_52_low ? `$${ml.fundamentals.week_52_low}` : "N/A", null],
+                            ["EPS", ml.fundamentals.eps ? `${quant?.currency || "$"}${ml.fundamentals.eps.toFixed(2)}` : "N/A", ml.fundamentals.eps > 0],
+                            ["52w high", ml.fundamentals.week_52_high ? `${quant?.currency || "$"}${ml.fundamentals.week_52_high}` : "N/A", null],
+                            ["52w low", ml.fundamentals.week_52_low ? `${quant?.currency || "$"}${ml.fundamentals.week_52_low}` : "N/A", null],
                             ["Beta", ml.fundamentals.beta?.toFixed(2) ?? "N/A", null],
                             ["AI company", ml.fundamentals.ai_mention, ml.fundamentals.ai_mention === "Yes"],
                           ] as [string, string, boolean | null][]).map(([label, value, positive]) => (

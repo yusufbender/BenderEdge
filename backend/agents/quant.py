@@ -4,6 +4,22 @@ from langchain_ollama import OllamaLLM
 llm = OllamaLLM(model="qwen2.5:7b")
 
 def run_quant(ticker: str) -> dict:
+
+    # Para birimi tespiti
+    def get_currency(ticker: str) -> str:
+        if ticker.endswith(".IS"):
+            return "₺"
+        elif ticker.endswith(".L"):
+            return "£"
+        elif ticker.endswith(".DE") or ticker.endswith(".PA") or ticker.endswith(".MI"):
+            return "€"
+        elif ticker.endswith(".T"):
+            return "¥"
+        elif ticker.endswith(".HK"):
+            return "HK$"
+        else:
+            return "$"
+        
     stock = yf.Ticker(ticker)
     hist = stock.history(period="3mo")
 
@@ -128,5 +144,6 @@ REASONING: <1 sentence explaining your vote>"""
         "assessment": assessment,
         "vote": vote,
         "confidence": confidence,
-        "reasoning": reasoning
+        "reasoning": reasoning,
+        "currency": get_currency(ticker),
     }
