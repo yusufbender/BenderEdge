@@ -1,6 +1,6 @@
 import yfinance as yf
 from langchain_ollama import OllamaLLM
-
+import pandas as pd
 llm = OllamaLLM(model="qwen2.5:7b")
 
 def run_quant(ticker: str) -> dict:
@@ -121,6 +121,38 @@ REASONING: <1 sentence explaining your vote>"""
         elif line.startswith("REASONING:"):
             reasoning = line.replace("REASONING:", "").strip()
 
+        # Risk yönetimi — ATR bazlı
+    atr_period = 14
+    high_low = hist["High"] - hist["Low"]
+    high_close = abs(hist["High"] - hist["Close"].shift(1))
+    low_close = abs(hist["Low"] - hist["Close"].shift(1))
+    true_range = pd.concat([high_low, high_close, low_close], axis=1).max(axis=1)
+    atr = round(float(true_range.rolling(atr_period).mean().iloc[-1]), 2)
+
+    # Stop loss ve take profit
+    stop_loss_pct = round((atr / current_price) * 100 * 1.5, 2)
+    take_profit_pct = round(stop_loss_pct * 2, 2)
+
+    stop_loss_price = round(current_price * (1 - stop_loss_pct / 100), 2)
+    take_profit_price = round(current_price * (1 + take_profit_pct / 100), 2)
+
+    risk_reward = round(take_profit_pct / stop_loss_pct, 2) if stop_loss_pct > 0 else 2.0
+
+    # Kelly criterion ile pozisyon büyüklüğü
+    win_rate = 0.55
+    kelly_pct = round((win_rate - (1 - win_rate) / risk_reward) * 100, 1)
+    kelly_pct = max(1.0, min(kelly_pct, 25.0))  # 1-25% arası sınırla
+
+    risk_management = {
+        "atr": atr,
+        "stop_loss_price": stop_loss_price,
+        "stop_loss_pct": stop_loss_pct,
+        "take_profit_price": take_profit_price,
+        "take_profit_pct": take_profit_pct,
+        "risk_reward": risk_reward,
+        "position_size_pct": kelly_pct,
+    }
+
     return {
         "agent": "quant",
         "ticker": ticker,
@@ -146,4 +178,6 @@ REASONING: <1 sentence explaining your vote>"""
         "confidence": confidence,
         "reasoning": reasoning,
         "currency": get_currency(ticker),
+        "risk_management": risk_management,
+        "atr": atr,
     }

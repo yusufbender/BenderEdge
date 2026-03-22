@@ -10,6 +10,16 @@ interface QuantData {
   macd: number; macd_signal: string; bb_upper: number; bb_lower: number; bb_position: string;
   volume_spike: boolean; support: number; resistance: number; trend: string;
   assessment: string; vote: string; confidence: number; reasoning: string;
+  atr: number;
+  risk_management: {
+    atr: number;
+    stop_loss_price: number;
+    stop_loss_pct: number;
+    take_profit_price: number;
+    take_profit_pct: number;
+    risk_reward: number;
+    position_size_pct: number;
+  };
 }
 interface SentimentData { score: number; label: string; reasoning: string; vote: string; confidence: number; }
 interface PortfolioData {
@@ -421,6 +431,40 @@ export default function Home() {
                   </div>
                   <p className="text-white/40 text-sm mb-1">{quant.assessment}</p>
                   <p className="text-white/20 text-xs italic">{quant.reasoning}</p>
+                  {/* Risk Management */}
+                  {quant.risk_management && (
+                    <div className="mt-5 bg-white/3 border border-white/5 rounded-xl p-4">
+                      <p className="text-xs text-white/30 uppercase tracking-widest mb-4">Risk management</p>
+                      <div className="grid grid-cols-2 gap-3 mb-3">
+                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                          <p className="text-xs text-red-400 uppercase tracking-widest mb-1">Stop loss</p>
+                          <p className="text-lg font-bold text-red-400">{quant.currency}{quant.risk_management.stop_loss_price}</p>
+                          <p className="text-xs text-white/30 mt-1">-{quant.risk_management.stop_loss_pct}% from entry</p>
+                        </div>
+                        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                          <p className="text-xs text-green-400 uppercase tracking-widest mb-1">Take profit</p>
+                          <p className="text-lg font-bold text-green-400">{quant.currency}{quant.risk_management.take_profit_price}</p>
+                          <p className="text-xs text-white/30 mt-1">+{quant.risk_management.take_profit_pct}% from entry</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="bg-white/3 rounded-lg p-3 text-center">
+                          <p className="text-xs text-white/30 mb-1">Risk/Reward</p>
+                          <p className={`text-lg font-bold ${quant.risk_management.risk_reward >= 2 ? "text-green-400" : "text-yellow-400"}`}>
+                            1:{quant.risk_management.risk_reward}
+                          </p>
+                        </div>
+                        <div className="bg-white/3 rounded-lg p-3 text-center">
+                          <p className="text-xs text-white/30 mb-1">ATR (14)</p>
+                          <p className="text-lg font-bold text-white/60">{quant.currency}{quant.risk_management.atr}</p>
+                        </div>
+                        <div className="bg-white/3 rounded-lg p-3 text-center">
+                          <p className="text-xs text-white/30 mb-1">Position size</p>
+                          <p className="text-lg font-bold text-purple-400">{quant.risk_management.position_size_pct}%</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
