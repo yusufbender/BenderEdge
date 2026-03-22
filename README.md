@@ -11,8 +11,7 @@
 [![LangChain](https://img.shields.io/badge/LangChain-Agents-green?style=flat-square)](https://langchain.com)
 [![Ollama](https://img.shields.io/badge/Ollama-Local_LLM-purple?style=flat-square)](https://ollama.com)
 [![SQLite](https://img.shields.io/badge/SQLite-Database-blue?style=flat-square&logo=sqlite)](https://sqlite.org)
-[![License](https://img.shields.io/badge/License-MIT-yellow?style=flat-square)](LICENSE)
-
+[![License](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey?style=flat-square)](LICENSE)
 ---
 
 ## ⚠️ Disclaimer
@@ -315,9 +314,9 @@ Scanner: [http://localhost:3000/scanner](http://localhost:3000/scanner)
 - [x] Accuracy tracker by verdict type
 
 ### 🔮 v1.5 — New Agents
-- [ ] Insider Trading Agent (SEC EDGAR Form 4)
-- [ ] Macro Agent (FRED API — rates, inflation, GDP)
-- [ ] Earnings Agent (EPS beat/miss history)
+- [x] Insider Trading Agent (SEC EDGAR Form 4)
+- [x] Macro Agent (FRED API — rates, inflation, GDP)
+- [x] Earnings Agent (EPS beat/miss history)
 
 ### 🔮 v1.6 — MLOps
 - [ ] Redis cache
