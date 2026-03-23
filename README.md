@@ -57,9 +57,12 @@ User Input (Ticker / Index)
 FastAPI Orchestrator (LangChain)
          │
          ├─── Researcher Agent  ──► NewsAPI + LLM analysis
-         ├─── Quant Agent       ──► RSI, MACD, BB, SMA, Volume
+         ├─── Quant Agent       ──► RSI, MACD, BB, SMA, ATR risk mgmt
          ├─── Sentiment Agent   ──► Headline tone scoring
          ├─── BenderQuant Agent ──► XGBoost on-the-fly + SHAP
+         ├─── Insider Agent     ──► SEC EDGAR Form 4
+         ├─── Macro Agent       ──► FRED API — rates, inflation, GDP
+         ├─── Earnings Agent    ──► EPS history + surprise
          │
          ▼
 Portfolio Agent (Weighted Voting)
@@ -130,10 +133,13 @@ Aggregates all agent votes using a weighted system designed to prioritize quanti
 
 | Agent | Weight | Rationale |
 |-------|--------|-----------|
-| Quant | 35% | Objective, rule-based |
-| BenderQuant ML | 30% | Data-driven, ticker-specific |
-| Sentiment | 20% | News-driven momentum |
-| Researcher | 15% | Contextual intelligence |
+| Quant | 30% | Objective, rule-based |
+| BenderQuant ML | 25% | Data-driven, ticker-specific |
+| Sentiment | 15% | News-driven momentum |
+| Researcher | 10% | Contextual intelligence |
+| Earnings | 10% | Fundamental performance |
+| Macro | 5% | Economic environment |
+| Insider | 5% | Smart money signals |
 ```
 confidence_score = agent_agreement × signal_strength
 ```
@@ -224,6 +230,12 @@ Every analysis is saved to SQLite. After 7 days, the system automatically valida
 - ✅ **Global market support** — NYSE, NASDAQ, BIST, LSE, Frankfurt, Tokyo
 - ✅ **Spotlight headlines** with Risk / Catalyst extraction
 - ✅ **Fully local LLM** — no API costs, no data leakage
+- ✅ **7 specialized agents** — Quant, ML, Sentiment, Insider, Macro, Earnings, Research
+- ✅ **ATR-based risk management** — stop loss, take profit, position sizing
+- ✅ **Walk-forward backtesting** — out-of-sample validation
+- ✅ **SMOTE class balancing** — handles imbalanced training data
+- ✅ **Sidebar dashboard** — clean navigation between analysis sections
+- ✅ **Landing page** — quick-start with recent tickers
 
 ---
 
@@ -313,19 +325,31 @@ Scanner: [http://localhost:3000/scanner](http://localhost:3000/scanner)
 - [x] 7-day prediction validation
 - [x] Accuracy tracker by verdict type
 
-### 🔮 v1.5 — New Agents
+### ✅ v1.5 — New Agents
 - [x] Insider Trading Agent (SEC EDGAR Form 4)
-- [x] Macro Agent (FRED API — rates, inflation, GDP)
+- [x] Macro Agent (FRED API)
 - [x] Earnings Agent (EPS beat/miss history)
 
-### 🔮 v1.6 — MLOps
+### ✅ v1.6 — UI Redesign
+- [x] Landing page with hero section
+- [x] Sidebar navigation
+- [x] Navbar with ticker + new analysis button
+
+### ✅ v1.7 — Risk & Model Quality
+- [x] ATR-based risk management
+- [x] Walk-forward backtesting
+- [x] SMOTE class balancing
+- [x] Model determinism (random_state=42)
+- [x] Rate limiting
+
+### 🔮 v1.8 — MLOps
 - [ ] Redis cache
 - [ ] MLflow experiment tracking
 - [ ] LangGraph agent orchestration
 
 ### 🚀 v2.0 — Production
 - [ ] User authentication
-- [ ] Alert system (price + signal triggers)
+- [ ] Alert system
 - [ ] Deploy on Railway + Vercel
 - [ ] Docker Compose setup
 
