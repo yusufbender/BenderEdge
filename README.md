@@ -36,7 +36,7 @@
 
 Most stock analysis tools give you a single signal from a single model. BenderEdge is different:
 
-- **5 agents with different methodologies** vote independently
+- **7 agents with different methodologies** vote independently
 - **Disagreement is a signal** — low agreement = lower confidence
 - **ML model trains on-the-fly** for each ticker, no stale pre-trained weights
 - **Sector-aware XGBoost** — different hyperparameters per sector
